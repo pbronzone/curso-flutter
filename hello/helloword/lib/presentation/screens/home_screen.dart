@@ -37,7 +37,7 @@ class _HomeViewState extends State<_HomeView> {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text('Bienvenido ${widget.username}'),
+      child: Text('Welcome ${widget.username}'),
     );
   }
 }

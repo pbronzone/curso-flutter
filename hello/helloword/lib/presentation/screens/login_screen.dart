@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final List<User> users = [
     User(user: 'Pablo', password: '1111'),
     User(user: 'Ceci', password: '2222'),
-    User(user: 'Dante', password: '3333')
+    User(user: 'dante', password: '777')
   ];
   User findUser(String user) =>
       users.firstWhere((element) => element.user == user,

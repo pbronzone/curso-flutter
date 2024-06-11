@@ -3,19 +3,19 @@ import 'package:floor/floor.dart';
 @entity
 class HvacDevice {
   @PrimaryKey(autoGenerate: true)
-  final int id;
-  final String name;
+  final int? id;
+  String name;
   final bool isOnline;
   final bool? status;
   final double? temp;
   final double? setpoint;
   final String? mode;
   final String? fan;
-  final String? type;
+  final String type;
   final String? img;
 
   HvacDevice({
-    required this.id,
+    this.id,
     required this.name,
     required this.isOnline,
     this.status,
@@ -23,7 +23,7 @@ class HvacDevice {
     this.setpoint,
     this.mode,
     this.fan,
-    this.type,
+    required this.type,
     this.img,
   });
 }

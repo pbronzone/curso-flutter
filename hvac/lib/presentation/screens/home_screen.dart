@@ -1,151 +1,120 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/hvac_device_datasource.dart';
+import 'package:hvac/core/data/hvac_device_repository.dart';
 import 'package:hvac/core/entities/hvac_device.dart';
-import 'package:hvac/presentation/screens/widgets/drawer_menu.dart';
+import 'package:hvac/presentation/widgets/drawer_menu.dart';
 
 enum TypeHvacDevice { wall, cassette, ducted }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.userName});
   static const String name = 'HomeScreen';
+  final String userName;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late Future<List<HvacDevice>> deviceRequest;
+
+  @override
+  void initState() {
+    deviceRequest = HvacDeviceRepository().findAllDevices();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('HVAC Home'),
       ),
-      body: const _HomeView(),
-      drawer: const DrawerMenu(),
+      body: FutureBuilder(
+          future: deviceRequest,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            } else {
+              if (snapshot.hasData) {
+                final hvacDeviceList = snapshot.data!;
+                return ListView.builder(
+                    itemCount: hvacDeviceList.length,
+                    itemBuilder: (context, index) {
+                      final device = hvacDeviceList[index];
+                      return _HvacDeviceItemView(
+                        item: device,
+                        onItemTap: () async {
+                          goToDetails(context, device);
+                        },
+                      );
+                    });
+              } else {
+                return Text(snapshot.error.toString());
+              }
+            }
+          }),
+      drawer: DrawerMenu(userName: widget.userName),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          //addHvacDevice(context);
-          showDialog(
-            context: context,
-            builder: (_) {
-              return const MyDialog();
-            },
-          );
+        onPressed: () async {
+          try {
+            final bool refresh = await showDialog(
+              context: context,
+              builder: (context) {
+                return const AddDevice();
+              },
+            ) as bool;
+            if (refresh) {
+              deviceRequest = HvacDeviceRepository().findAllDevices();
+              setState(() {});
+            }
+          } catch (e) {
+            print('Error desconocido $e');
+          }
         },
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  /*void addHvacDevice(BuildContext context) {
-    TextEditingController tagController = TextEditingController();
-    TypeHvacDevice selectedType = TypeHvacDevice.wall;
-    String selected = 'wall';
-    showDialog(
-      barrierDismissible: false,
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Agregar dispositivo'),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                context.pop();
-              },
-            ),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(50),
-            child: Center(
-                child: ListView(
-              children: [
-                TextField(
-                  controller: tagController,
-                  decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      hintText: 'Etiqueta',
-                      prefixIcon: const Icon(
-                        Icons.comment_outlined,
-                      )),
-                ),
-                const Gap(10),
-                ExpansionTile(
-                  title: const Text('Tipo de equipo'),
-                  subtitle: Text(selected),
-                  children: [
-                    RadioListTile(
-                      value: TypeHvacDevice.wall.name,
-                      groupValue: selectedType.name,
-                      title: Text(TypeHvacDevice.wall.name),
-                      subtitle: const Text('Equipo mural'),
-                      onChanged: (value) {
-                        setState(() {
-                          selected = value!;
-                        });
-                      },
-                    ),
-                    RadioListTile(
-                      value: TypeHvacDevice.cassette.name,
-                      groupValue: selectedType.name,
-                      title: Text(TypeHvacDevice.cassette.name),
-                      subtitle: const Text('Equipo cassette'),
-                      onChanged: (value) {
-                        setState(() {
-                          selected = value!;
-                        });
-                      },
-                    ),
-                    RadioListTile(
-                      value: TypeHvacDevice.ducted.name,
-                      groupValue: selectedType.name,
-                      title: Text(TypeHvacDevice.ducted.name),
-                      subtitle: const Text('Equipo oculto'),
-                      onChanged: (value) {
-                        setState(() {
-                          selected = value!;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            )),
-          ),
-        ),
-      ),
-    );
-  }*/
-}
-
-class _HomeView extends StatelessWidget {
-  const _HomeView({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-        itemCount: hvacDeviceList.length,
-        itemBuilder: (context, index) {
-          return _HvacDeviceItemView(item: hvacDeviceList[index]);
-        });
+  void goToDetails(BuildContext context, HvacDevice device) async {
+    try {
+      if (!device.isOnline) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('El dispositivo se encuetra fuera de línea'),
+          duration: Duration(seconds: 1),
+        ));
+      }
+      final bool refresh =
+          await context.push('/device_detail_screen/${device.id}') as bool;
+      if (refresh) {
+        deviceRequest = HvacDeviceRepository().findAllDevices();
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error $e');
+    }
   }
 }
 
-class _HvacDeviceItemView extends StatelessWidget {
+class _HvacDeviceItemView extends StatefulWidget {
   const _HvacDeviceItemView({
-    super.key,
     required this.item,
+    this.onItemTap,
   });
   final HvacDevice item;
+  final Function? onItemTap;
+  @override
+  State<_HvacDeviceItemView> createState() => _HvacDeviceItemViewState();
+}
 
+class _HvacDeviceItemViewState extends State<_HvacDeviceItemView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -154,34 +123,48 @@ class _HvacDeviceItemView extends StatelessWidget {
         child: ListTile(
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(5),
-            child: Image.asset(item.img as String),
+            child: Image.asset(widget.item.img as String),
           ),
-          title: Text(item.name),
+          title: Text(widget.item.name),
           subtitle: Row(
             children: [
-              Text('Estado: ${item.status! ? 'ON' : 'OFF'}'),
+              Icon(
+                Icons.power_settings_new_outlined,
+                color: widget.item.status!
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onBackground,
+                size: 24,
+              ),
               const Gap(10),
-              Text('Temp: ${item.temp!}°C'),
+              const Icon(
+                Icons.thermostat,
+                size: 22,
+              ),
+              const Gap(2),
+              Text(
+                '${widget.item.temp!}°',
+                style: const TextStyle(fontSize: 18),
+              ),
             ],
           ),
-          trailing: item.isOnline
+          trailing: widget.item.isOnline
               ? const Icon(Icons.wifi)
               : const Icon(Icons.wifi_off),
-          onTap: () {},
+          onTap: () => widget.onItemTap?.call(),
         ),
       ),
     );
   }
 }
 
-class MyDialog extends StatefulWidget {
-  const MyDialog({super.key});
+class AddDevice extends StatefulWidget {
+  const AddDevice({super.key});
 
   @override
-  State<MyDialog> createState() => _MyDialogState();
+  State<AddDevice> createState() => _AddDeviceState();
 }
 
-class _MyDialogState extends State<MyDialog> {
+class _AddDeviceState extends State<AddDevice> {
   TextEditingController tagController = TextEditingController();
   TypeHvacDevice selectedType = TypeHvacDevice.wall;
 
@@ -194,12 +177,12 @@ class _MyDialogState extends State<MyDialog> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () {
-              context.pop();
+              context.pop(false);
             },
           ),
         ),
         body: Padding(
-          padding: const EdgeInsets.all(50),
+          padding: const EdgeInsets.all(40),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.max,
@@ -216,51 +199,47 @@ class _MyDialogState extends State<MyDialog> {
                       )),
                 ),
                 const Gap(10),
-                ExpansionTile(
-                  title: const Text('Tipo de equipo'),
-                  subtitle: Text(selectedType.name),
-                  children: [
-                    RadioListTile(
-                      value: TypeHvacDevice.wall,
-                      groupValue: selectedType,
-                      title: Text(TypeHvacDevice.wall.name),
-                      subtitle: const Text('Equipo mural'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value as TypeHvacDevice;
-                        });
-                      },
-                    ),
-                    RadioListTile(
-                      value: TypeHvacDevice.cassette,
-                      groupValue: selectedType,
-                      title: Text(TypeHvacDevice.cassette.name),
-                      subtitle: const Text('Equipo cassette'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value as TypeHvacDevice;
-                        });
-                      },
-                    ),
-                    RadioListTile(
-                      value: TypeHvacDevice.ducted,
-                      groupValue: selectedType,
-                      title: Text(TypeHvacDevice.ducted.name),
-                      subtitle: const Text('Equipo oculto'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value as TypeHvacDevice;
-                        });
-                      },
-                    ),
-                  ],
-                ),
+                SegmentedButton(
+                    showSelectedIcon: true,
+                    segments: const <ButtonSegment<TypeHvacDevice>>[
+                      ButtonSegment<TypeHvacDevice>(
+                        value: TypeHvacDevice.wall,
+                        label: Text('Mural'),
+                      ),
+                      ButtonSegment<TypeHvacDevice>(
+                        value: TypeHvacDevice.ducted,
+                        label: Text('Oculto'),
+                      ),
+                      ButtonSegment<TypeHvacDevice>(
+                        value: TypeHvacDevice.cassette,
+                        label: Text('Cassette'),
+                      ),
+                    ],
+                    selected: <TypeHvacDevice>{selectedType},
+                    onSelectionChanged: (Set<TypeHvacDevice> newSelection) {
+                      setState(() {
+                        selectedType = newSelection.first;
+                      });
+                    }),
+                const Gap(20),
                 SafeArea(
                   child: Align(
                     alignment: Alignment.bottomRight,
                     child: FilledButton(
-                      onPressed: () {
-                        context.pop();
+                      onPressed: () async {
+                        if (tagController.text.isEmpty) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(
+                            content:
+                                Text('El campo etiqueta no puede estar vacío'),
+                            duration: Duration(seconds: 1),
+                          ));
+                        } else {
+                          HvacDevice newDevice = getDeviceState(
+                              tagController.text, selectedType.name);
+                          await HvacDeviceRepository().insertDevice(newDevice);
+                          context.pop(true);
+                        }
                       },
                       child: const Text('Guardar'),
                     ),
@@ -275,26 +254,16 @@ class _MyDialogState extends State<MyDialog> {
   }
 }
 
-/*AlertDialog(
-              title: const Text('Agregar Dispositivo'),
-              content: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Primero'),
-                  Text('Segundo'),
-                  Text('Tercero'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                    onPressed: () {
-                      context.pop();
-                    },
-                    child: const Text('CANCELAR')),
-                FilledButton(
-                    onPressed: () {
-                      context.pop();
-                    },
-                    child: const Text('OK')),
-              ],
-            )); */
+HvacDevice getDeviceState(String name, String type) {
+  double random = Random().nextDouble();
+  return HvacDevice(
+      name: name,
+      isOnline: random > 0.1,
+      status: random > 0.2,
+      temp: (20 + 10 * random).floorToDouble(),
+      setpoint: (21 + 5 * random).floorToDouble(),
+      mode: (random > 0.6) ? 'auto' : (random < 0.3 ? 'heat' : 'cool'),
+      fan: (random > 0.6) ? 'high' : (random < 0.3 ? 'medium' : 'low'),
+      type: type,
+      img: 'assets/images/$type.png');
+}

@@ -1,4 +1,8 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hvac/core/data/settings_repository.dart';
+import 'package:hvac/core/data/user_repository.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,8 +15,47 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    final settingsRequest = SettingRepository().findAllSettings();
+    final userRequest = UserRepository().findAllUsers();
+    settingsRequest.then((result) {
+      if (result.isEmpty) {
+        //Si el resultado viene vacío escribo el default de la app
+        SettingRepository().defaultSettings().then((result) {
+          context.go('/login_screen');
+        });
+      } else {
+        // Si no esta vacio, verifico que no sea null y si el user no está logeado
+        final settings = result.firstWhereOrNull((element) => element.id == 1);
+        if (settings != null && settings.userId == -1) {
+          context.go('/login_screen');
+        } else {
+          // lanzo el request para luego pasar a la pantalla de home
+
+          userRequest.then((value) {
+            if (value.isEmpty) {
+              context.go('/login_screen');
+            } else {
+              final user = value.firstWhereOrNull(
+                  (element) => element.id == settings?.userId);
+              if (user != null) {
+                context.go('/home_screen', extra: user.userName);
+              } else {
+                context.go('/login_screen');
+              }
+            }
+          }).catchError((e) {
+            //Si ocurre algun error al leer la db de user
+            context.go('/login_screen');
+          });
+        }
+      }
+    }).catchError((e) {
+      // Si ocurre algun error en la lectura de la configuración escribo los valores por defecto y voy al login
+      SettingRepository().defaultSettings().then((result) {
+        context.go('/login_screen');
+      });
+    });
   }
 
   @override
@@ -30,19 +73,19 @@ class _SplashScreenState extends State<SplashScreen> {
                 'assets/images/hvac_logo.png',
               )),
             ),
-            const Padding(
+            /*const Padding(
               padding: EdgeInsets.symmetric(horizontal: 60),
               child: LinearProgressIndicator(
                 value: 0.3,
               ),
-            )
-            /*const Padding(
+            )*/
+            const Padding(
               padding: EdgeInsets.all(50),
               child: CircularProgressIndicator(
                 strokeWidth: 4,
                 backgroundColor: Colors.black26,
               ),
-            )*/
+            )
           ],
         ),
       ),

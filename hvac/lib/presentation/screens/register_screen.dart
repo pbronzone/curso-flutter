@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hvac/core/data/user_repository.dart';
+import 'package:hvac/core/entities/user.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
@@ -18,9 +20,7 @@ class RegisterScreen extends StatelessWidget {
 }
 
 class _RegisterView extends StatefulWidget {
-  const _RegisterView({
-    super.key,
-  });
+  const _RegisterView();
 
   @override
   State<_RegisterView> createState() => _RegisterViewState();
@@ -30,7 +30,7 @@ class _RegisterViewState extends State<_RegisterView> {
   TextEditingController userController = TextEditingController();
   TextEditingController passWordController = TextEditingController();
   TextEditingController passWordCheckController = TextEditingController();
-  bool? termsCheckBoxValue = false;
+  bool termsCheckBoxValue = false;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class _RegisterViewState extends State<_RegisterView> {
           ),
           const Gap(10),
           TextField(
-            controller: passWordController,
+            controller: passWordCheckController,
             decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -83,34 +83,44 @@ class _RegisterViewState extends State<_RegisterView> {
               title: const Text('Aceptar los términos de uso.'),
               controlAffinity: ListTileControlAffinity.leading,
               onChanged: (value) {
+                termsCheckBoxValue = !termsCheckBoxValue;
                 setState(() {
-                  termsCheckBoxValue = value;
-                  print(termsCheckBoxValue);
+                  //print(termsCheckBoxValue);
                 });
               },
             ),
           ),
           FilledButton(
-            onPressed: () {
-              context.go('/login_screen');
-              /*if (userController.text.isEmpty) {
-                    showSnackBar('Usuario no puede estar vacío', context);
-                  } /*else {
-                    if (findUser(userController.text).user == '') {
-                      showSnackBar('Usuario no encontrado', context);
-                      userController.clear();
-                      passWordController.clear();
-                    } else {
-                      if (findUser(userController.text).password !=
-                          passWordController.text) {
-                        showSnackBar('Contraseña incorrecta', context);
-                        passWordController.clear();
-                      } else {
-                        context.push('/home',
-                            extra: findUser(userController.text).user);
-                      }
-                    }
-                  }*/*/
+            onPressed: () async {
+              //context.go('/login_screen');
+              if (userController.text.isEmpty) {
+                showSnackBar('Usuario no puede estar vacío', context);
+              }
+              if (passWordController.text.isEmpty) {
+                showSnackBar('Contraseña no puede estar vacío', context);
+              }
+              if (passWordCheckController.text.isEmpty) {
+                showSnackBar('Contraseña no puede estar vacío', context);
+              }
+              if (!termsCheckBoxValue) {
+                showSnackBar('Debe aceptar los términos de uso', context);
+              } else {
+                if (userController.text.isNotEmpty &&
+                    passWordController.text.isNotEmpty &&
+                    passWordController.text == passWordCheckController.text) {
+                  User newUser = User(
+                    userName: userController.text,
+                    password: passWordController.text,
+                    isLoggedIn: false,
+                  );
+                  await UserRepository().insertUser(newUser);
+                  context.pop(true);
+                } else {
+                  showSnackBar('No coincide la contraseña', context);
+                  passWordController.clear();
+                  passWordCheckController.clear();
+                }
+              }
             },
             child: const Text(
               'Registrarse',
@@ -119,5 +129,13 @@ class _RegisterViewState extends State<_RegisterView> {
         ],
       ),
     );
+  }
+
+  void showSnackBar(String message, BuildContext context) {
+    SnackBar snackBar = SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 1),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

@@ -1,14 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/hvac_device_repository.dart';
+import 'package:hvac/core/data/local_hvac_device_repository.dart';
 import 'package:hvac/core/entities/hvac_device.dart';
+import 'package:hvac/presentation/utils/type_hvac_device.dart';
 import 'package:hvac/presentation/widgets/drawer_menu.dart';
-
-enum TypeHvacDevice { wall, cassette, ducted }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.userName});
@@ -20,11 +18,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<HvacDevice>> deviceRequest;
+  late Future<List<HvacDevice>> deviceList;
 
   @override
   void initState() {
-    deviceRequest = HvacDeviceRepository().findAllDevices();
+    deviceList = LocalHvacDeviceRepository().findAllDevices();
     super.initState();
   }
 
@@ -35,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('HVAC Home'),
       ),
       body: FutureBuilder(
-          future: deviceRequest,
+          future: deviceList,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -71,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ) as bool;
             if (refresh) {
-              deviceRequest = HvacDeviceRepository().findAllDevices();
+              deviceList = LocalHvacDeviceRepository().findAllDevices();
               setState(() {});
             }
           } catch (e) {
@@ -94,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final bool refresh =
           await context.push('/device_detail_screen/${device.id}') as bool;
       if (refresh) {
-        deviceRequest = HvacDeviceRepository().findAllDevices();
+        deviceList = LocalHvacDeviceRepository().findAllDevices();
         setState(() {});
       }
     } catch (e) {
@@ -142,7 +140,7 @@ class _HvacDeviceItemViewState extends State<_HvacDeviceItemView> {
               ),
               const Gap(2),
               Text(
-                '${widget.item.temp!}°',
+                '${widget.item.temp ?? '-'}°',
                 style: const TextStyle(fontSize: 18),
               ),
             ],
@@ -237,7 +235,8 @@ class _AddDeviceState extends State<AddDevice> {
                         } else {
                           HvacDevice newDevice = getDeviceState(
                               tagController.text, selectedType.name);
-                          await HvacDeviceRepository().insertDevice(newDevice);
+                          await LocalHvacDeviceRepository()
+                              .insertDevice(newDevice);
                           context.pop(true);
                         }
                       },
@@ -259,11 +258,11 @@ HvacDevice getDeviceState(String name, String type) {
   return HvacDevice(
       name: name,
       isOnline: random > 0.1,
-      status: random > 0.2,
+      status: random > 0.34,
       temp: (20 + 10 * random).floorToDouble(),
       setpoint: (21 + 5 * random).floorToDouble(),
-      mode: (random > 0.6) ? 'auto' : (random < 0.3 ? 'heat' : 'cool'),
-      fan: (random > 0.6) ? 'high' : (random < 0.3 ? 'medium' : 'low'),
+      mode: (random > 0.78) ? 'auto' : (random < 0.56 ? 'heat' : 'cool'),
+      fan: (random > 0.78) ? 'high' : (random < 0.56 ? 'medium' : 'low'),
       type: type,
       img: 'assets/images/$type.png');
 }

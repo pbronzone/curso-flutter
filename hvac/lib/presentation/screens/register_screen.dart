@@ -13,6 +13,12 @@ class RegisterScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Registro de Usuario'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.pop(true);
+          },
+        ),
       ),
       body: const _RegisterView(),
     );

@@ -1,25 +1,31 @@
+import 'package:hvac/core/domain/hvac_device_repository.dart';
 import 'package:hvac/core/entities/hvac_device.dart';
 import 'package:hvac/main.dart';
 
-class HvacDeviceRepository {
+class LocalHvacDeviceRepository implements HvacDeviceRepository {
   final _hvacDeviceDao = database.hvacDeviceDao;
 
+  @override
   Future<List<HvacDevice>> findAllDevices() async {
     return _hvacDeviceDao.findAllDevices();
   }
 
+  @override
   Future<HvacDevice?> findDeviceById(int id) {
     return _hvacDeviceDao.findDeviceById(id);
   }
 
+  @override
   Future<void> insertDevice(HvacDevice device) async {
     _hvacDeviceDao.insertDevice(device);
   }
 
+  @override
   Future<void> updateDevice(HvacDevice device) async {
     _hvacDeviceDao.updateDevice(device);
   }
 
+  @override
   Future<void> deleteDevice(HvacDevice device) async {
     _hvacDeviceDao.deleteDevice(device);
   }

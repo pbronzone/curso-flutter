@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/settings_repository.dart';
+import 'package:hvac/core/data/local_settings_repository.dart';
 import 'package:hvac/core/data/user_repository.dart';
 import 'package:hvac/core/entities/settings.dart';
 import 'package:hvac/core/entities/user.dart';
@@ -124,7 +124,7 @@ class _LoginViewState extends State<_LoginView> {
                           if (checkBoxValue ?? false) {
                             userdb.isLoggedIn = true;
                             await UserRepository().updateUser(userdb);
-                            await SettingRepository().updateSettings(
+                            await LocalSettingsRepository().updateSettings(
                                 Settings(id: 1, userId: userdb.id ?? -1));
                           }
                           context.go(

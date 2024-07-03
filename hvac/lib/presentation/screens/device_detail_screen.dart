@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/hvac_device_repository.dart';
+import 'package:hvac/core/data/local_hvac_device_repository.dart';
 import 'package:hvac/core/entities/hvac_device.dart';
 
 enum Fan { low, medium, high }
@@ -26,7 +26,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   @override
   void initState() {
     super.initState();
-    deviceRequest = HvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
+    deviceRequest =
+        LocalHvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
   }
 
   @override
@@ -103,11 +104,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     child: const Text('CANCELAR')),
                 FilledButton(
                     onPressed: () async {
-                      HvacDevice? actual = await HvacDeviceRepository()
+                      HvacDevice? actual = await LocalHvacDeviceRepository()
                           .findDeviceById(widget.hvacDeviceId);
                       if (actual != null) {
                         actual.name = name.text;
-                        await HvacDeviceRepository().updateDevice(actual);
+                        await LocalHvacDeviceRepository().updateDevice(actual);
                       } else {
                         ScaffoldMessenger.of(context)
                             .showSnackBar(const SnackBar(
@@ -122,7 +123,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             )) as bool;
     if (refresh) {
       deviceRequest =
-          HvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
+          LocalHvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
       setState(() {});
     }
   }
@@ -142,9 +143,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     child: const Text('CANCELAR')),
                 FilledButton(
                     onPressed: () async {
-                      HvacDevice? actual = await HvacDeviceRepository()
+                      HvacDevice? actual = await LocalHvacDeviceRepository()
                           .findDeviceById(widget.hvacDeviceId);
-                      await HvacDeviceRepository().deleteDevice(actual!);
+                      await LocalHvacDeviceRepository().deleteDevice(actual!);
                       context.pop(true);
                     },
                     child: const Text('OK')),
@@ -152,7 +153,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             ));
     if (refresh) {
       deviceRequest =
-          HvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
+          LocalHvacDeviceRepository().findDeviceById(widget.hvacDeviceId);
       setState(() {});
     }
   }
@@ -191,137 +192,139 @@ class _DeviceDetailViewState extends State<_DeviceDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        Text(
-          widget.hvacDevice.name,
-          style: textStyle,
-        ),
-        Padding(
-          padding: const EdgeInsets.all(50),
-          child: ClipRect(
-              child: Image.asset(
-            widget.hvacDevice.img!,
-          )),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 80),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      statusSwitch = !statusSwitch;
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.power_settings_new_outlined),
-                    iconSize: 48,
-                    style: ButtonStyle(
-                        iconColor: MaterialStatePropertyAll(statusSwitch
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onBackground)),
-                  )
-                ],
-              ),
-              const Gap(40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setpoint--;
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.arrow_back_ios),
-                        style: ButtonStyle(
-                            iconColor: MaterialStatePropertyAll(
-                                Theme.of(context).colorScheme.primary)),
-                      ),
-                      Text(
-                        '$setpoint°',
-                        style: textStyle,
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setpoint++;
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        style: ButtonStyle(
-                            iconColor: MaterialStatePropertyAll(
-                                Theme.of(context).colorScheme.primary)),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const Gap(20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  SegmentedButton(
-                      style: const ButtonStyle(
-                          fixedSize: MaterialStatePropertyAll(Size(150, 40))),
-                      showSelectedIcon: false,
-                      segments: const <ButtonSegment<Mode>>[
-                        ButtonSegment<Mode>(
-                            value: Mode.auto,
-                            icon: Icon(Icons.hdr_auto_outlined)),
-                        ButtonSegment<Mode>(
-                            value: Mode.cool, icon: Icon(Icons.ac_unit)),
-                        ButtonSegment<Mode>(
-                            value: Mode.heat,
-                            icon: Icon(Icons.brightness_5_outlined)),
-                      ],
-                      selected: <Mode>{modeView},
-                      onSelectionChanged: (Set<Mode> newSelection) {
-                        setState(() {
-                          modeView = newSelection.first;
-                        });
-                      }),
-                ],
-              ),
-              const Gap(20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  SegmentedButton(
-                      showSelectedIcon: false,
-                      segments: const <ButtonSegment<Fan>>[
-                        ButtonSegment<Fan>(
-                            value: Fan.low,
-                            icon: Icon(Icons.signal_cellular_alt_1_bar)),
-                        ButtonSegment<Fan>(
-                            value: Fan.medium,
-                            icon: Icon(Icons.signal_cellular_alt_2_bar)),
-                        ButtonSegment<Fan>(
-                            value: Fan.high,
-                            icon: Icon(Icons.signal_cellular_alt_outlined)),
-                      ],
-                      selected: <Fan>{fanView},
-                      onSelectionChanged: (Set<Fan> newSelection) {
-                        setState(() {
-                          fanView = newSelection.first;
-                        });
-                      }),
-                ],
-              ),
-            ],
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            widget.hvacDevice.name,
+            style: textStyle,
           ),
-        )
-      ],
+          Padding(
+            padding: const EdgeInsets.all(50),
+            child: ClipRect(
+                child: Image.asset(
+              widget.hvacDevice.img!,
+            )),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 80),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        statusSwitch = !statusSwitch;
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.power_settings_new_outlined),
+                      iconSize: 48,
+                      style: ButtonStyle(
+                          iconColor: MaterialStatePropertyAll(statusSwitch
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onBackground)),
+                    )
+                  ],
+                ),
+                const Gap(40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            setpoint--;
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.arrow_back_ios),
+                          style: ButtonStyle(
+                              iconColor: MaterialStatePropertyAll(
+                                  Theme.of(context).colorScheme.primary)),
+                        ),
+                        Text(
+                          '$setpoint°',
+                          style: textStyle,
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            setpoint++;
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.arrow_forward_ios),
+                          style: ButtonStyle(
+                              iconColor: MaterialStatePropertyAll(
+                                  Theme.of(context).colorScheme.primary)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Gap(20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    SegmentedButton(
+                        style: const ButtonStyle(
+                            fixedSize: MaterialStatePropertyAll(Size(150, 40))),
+                        showSelectedIcon: false,
+                        segments: const <ButtonSegment<Mode>>[
+                          ButtonSegment<Mode>(
+                              value: Mode.auto,
+                              icon: Icon(Icons.hdr_auto_outlined)),
+                          ButtonSegment<Mode>(
+                              value: Mode.cool, icon: Icon(Icons.ac_unit)),
+                          ButtonSegment<Mode>(
+                              value: Mode.heat,
+                              icon: Icon(Icons.brightness_5_outlined)),
+                        ],
+                        selected: <Mode>{modeView},
+                        onSelectionChanged: (Set<Mode> newSelection) {
+                          setState(() {
+                            modeView = newSelection.first;
+                          });
+                        }),
+                  ],
+                ),
+                const Gap(20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    SegmentedButton(
+                        showSelectedIcon: false,
+                        segments: const <ButtonSegment<Fan>>[
+                          ButtonSegment<Fan>(
+                              value: Fan.low,
+                              icon: Icon(Icons.signal_cellular_alt_1_bar)),
+                          ButtonSegment<Fan>(
+                              value: Fan.medium,
+                              icon: Icon(Icons.signal_cellular_alt_2_bar)),
+                          ButtonSegment<Fan>(
+                              value: Fan.high,
+                              icon: Icon(Icons.signal_cellular_alt_outlined)),
+                        ],
+                        selected: <Fan>{fanView},
+                        onSelectionChanged: (Set<Fan> newSelection) {
+                          setState(() {
+                            fanView = newSelection.first;
+                          });
+                        }),
+                  ],
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }

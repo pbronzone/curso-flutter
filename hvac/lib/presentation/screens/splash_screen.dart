@@ -1,7 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/settings_repository.dart';
+import 'package:hvac/core/data/local_settings_repository.dart';
 import 'package:hvac/core/data/user_repository.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,12 +16,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    final settingsRequest = SettingRepository().findAllSettings();
+    final settingsRequest = LocalSettingsRepository().findAllSettings();
     final userRequest = UserRepository().findAllUsers();
     settingsRequest.then((result) {
       if (result.isEmpty) {
         //Si el resultado viene vacío escribo el default de la app
-        SettingRepository().defaultSettings().then((result) {
+        LocalSettingsRepository().defaultSettings().then((result) {
           context.go('/login_screen');
         });
       } else {
@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }).catchError((e) {
       // Si ocurre algun error en la lectura de la configuración escribo los valores por defecto y voy al login
-      SettingRepository().defaultSettings().then((result) {
+      LocalSettingsRepository().defaultSettings().then((result) {
         context.go('/login_screen');
       });
     });
@@ -80,9 +80,9 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             )*/
             const Padding(
-              padding: EdgeInsets.all(50),
-              child: CircularProgressIndicator(
-                strokeWidth: 4,
+              padding: EdgeInsets.all(60),
+              child: LinearProgressIndicator(
+                //strokeWidth: 4,
                 backgroundColor: Colors.black26,
               ),
             )

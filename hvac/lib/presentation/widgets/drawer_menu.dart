@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hvac/core/data/settings_repository.dart';
+import 'package:hvac/core/data/local_settings_repository.dart';
 import 'package:hvac/core/entities/settings.dart';
 
 class DrawerMenu extends StatefulWidget {
@@ -107,7 +107,7 @@ class _DrawerMenuState extends State<DrawerMenu> {
           FilledButton(
               onPressed: () async {
                 try {
-                  await SettingRepository()
+                  await LocalSettingsRepository()
                       .updateSettings(Settings(id: 1, userId: -1));
                   context.go('/login_screen');
                 } catch (e) {

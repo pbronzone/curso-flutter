@@ -1,38 +1,63 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hvac/core/data/local_hvac_device_repository.dart';
 import 'package:hvac/core/entities/hvac_device.dart';
+import 'package:hvac/presentation/utils/base_state.dart';
 import 'package:hvac/presentation/utils/type_hvac_device.dart';
+import 'package:hvac/presentation/viewmodels/providers.dart';
+import 'package:hvac/presentation/viewmodels/states/home_state.dart';
 import 'package:hvac/presentation/widgets/drawer_menu.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, required this.userName});
   static const String name = 'HomeScreen';
   final String userName;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<HvacDevice>> deviceList;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  //late Future<List<HvacDevice>> deviceList;
 
   @override
   void initState() {
-    deviceList = LocalHvacDeviceRepository().findAllDevices();
+    //deviceList = LocalHvacDeviceRepository().findAllDevices();
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(homeViewModelProvider.notifier).fetchDevices();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final HomeState state = ref.watch(homeViewModelProvider);
+
+    final body = switch (state.screenState) {
+      BaseState.loading => const Center(child: CircularProgressIndicator()),
+      BaseState.idle => ListView.builder(
+          itemCount: state.hvacDeviceList.length,
+          itemBuilder: (context, index) {
+            return _HvacDeviceItemView(
+              item: state.hvacDeviceList[index],
+              onItemTap: () async {
+                goToDetails(context, state.hvacDeviceList[index]);
+              },
+            );
+          }),
+      BaseState.error => Text('${state.error}'),
+    };
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('HVAC Home'),
       ),
-      body: FutureBuilder(
+      body: body,
+      /*FutureBuilder(
           future: deviceList,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -57,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Text(snapshot.error.toString());
               }
             }
-          }),
+          }),*/
       drawer: DrawerMenu(userName: widget.userName),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -69,8 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ) as bool;
             if (refresh) {
-              deviceList = LocalHvacDeviceRepository().findAllDevices();
-              setState(() {});
+              /*deviceList = LocalHvacDeviceRepository().findAllDevices();
+              setState(() {});*/ //TODO Implementar con Riverpod
+              await ref.read(homeViewModelProvider.notifier).refreshDevices();
             }
           } catch (e) {
             print('Error desconocido $e');
@@ -92,8 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final bool refresh =
           await context.push('/device_detail_screen/${device.id}') as bool;
       if (refresh) {
-        deviceList = LocalHvacDeviceRepository().findAllDevices();
-        setState(() {});
+        /*deviceList = LocalHvacDeviceRepository().findAllDevices();
+        setState(() {}); //TODO Implementar con Riverpod*/
+        await ref.read(homeViewModelProvider.notifier).refreshDevices();
       }
     } catch (e) {
       print('Error $e');
@@ -101,18 +128,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HvacDeviceItemView extends StatefulWidget {
+class _HvacDeviceItemView extends StatelessWidget {
   const _HvacDeviceItemView({
     required this.item,
     this.onItemTap,
   });
   final HvacDevice item;
   final Function? onItemTap;
-  @override
-  State<_HvacDeviceItemView> createState() => _HvacDeviceItemViewState();
-}
-
-class _HvacDeviceItemViewState extends State<_HvacDeviceItemView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -121,14 +143,14 @@ class _HvacDeviceItemViewState extends State<_HvacDeviceItemView> {
         child: ListTile(
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(5),
-            child: Image.asset(widget.item.img as String),
+            child: Image.asset(item.img as String),
           ),
-          title: Text(widget.item.name),
+          title: Text(item.name),
           subtitle: Row(
             children: [
               Icon(
                 Icons.power_settings_new_outlined,
-                color: widget.item.status!
+                color: item.status!
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onBackground,
                 size: 24,
@@ -140,15 +162,15 @@ class _HvacDeviceItemViewState extends State<_HvacDeviceItemView> {
               ),
               const Gap(2),
               Text(
-                '${widget.item.temp ?? '-'}°',
+                '${item.temp ?? '-'}°',
                 style: const TextStyle(fontSize: 18),
               ),
             ],
           ),
-          trailing: widget.item.isOnline
+          trailing: item.isOnline
               ? const Icon(Icons.wifi)
               : const Icon(Icons.wifi_off),
-          onTap: () => widget.onItemTap?.call(),
+          onTap: () => onItemTap?.call(),
         ),
       ),
     );
@@ -162,6 +184,7 @@ class AddDevice extends StatefulWidget {
   State<AddDevice> createState() => _AddDeviceState();
 }
 
+//TODO Pasar a una nueva Screen
 class _AddDeviceState extends State<AddDevice> {
   TextEditingController tagController = TextEditingController();
   TypeHvacDevice selectedType = TypeHvacDevice.wall;
@@ -216,6 +239,7 @@ class _AddDeviceState extends State<AddDevice> {
                     selected: <TypeHvacDevice>{selectedType},
                     onSelectionChanged: (Set<TypeHvacDevice> newSelection) {
                       setState(() {
+                        //TODO Implementar con Riverpod
                         selectedType = newSelection.first;
                       });
                     }),
@@ -233,6 +257,7 @@ class _AddDeviceState extends State<AddDevice> {
                             duration: Duration(seconds: 1),
                           ));
                         } else {
+                          //TODO Implementar con Riverpod
                           HvacDevice newDevice = getDeviceState(
                               tagController.text, selectedType.name);
                           await LocalHvacDeviceRepository()

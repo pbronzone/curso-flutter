@@ -23,7 +23,7 @@ class MainApp extends StatelessWidget {
         routerConfig: appRouter,
         theme: ThemeData(
           colorSchemeSeed: Colors.blue,
-          brightness: Brightness.dark,
+          //brightness: Brightness.dark,
         ),
       ),
     );
